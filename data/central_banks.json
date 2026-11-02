@@ -1,0 +1,28 @@
+{
+  "_how_to_update": "Once a month, after the World Gold Council publishes its central bank statistics (early each month on gold.org/goldhub), edit these numbers and commit. The daily fetch reads this file; there is no free API for official gold reserves.",
+  "latest_month": "September 2026",
+  "latest_month_net_tonnes": 63,
+  "as_of": "2026-10-15",
+  "source": "World Gold Council preliminary data, via Seoul Economic Daily and Kitco",
+  "highlights": [
+    "China (PBoC) added 21 t in September, its largest monthly purchase in three years and its 23rd month of buying in a row; reserves 2,196 t.",
+    "Poland holds about 648 t, close to its 700 t target."
+  ],
+  "by_country_period": "Jan–Jul 2026",
+  "by_country": [
+    {"country": "Poland", "tonnes": 90},
+    {"country": "China", "tonnes": 60},
+    {"country": "Uzbekistan", "tonnes": 40},
+    {"country": "Kazakhstan", "tonnes": 29},
+    {"country": "Czech Republic", "tonnes": 12},
+    {"country": "Russia", "tonnes": -50},
+    {"country": "Turkey", "tonnes": -85}
+  ],
+  "bank_targets": [
+    {"bank": "J.P. Morgan", "target": 6300, "horizon": "End-2027", "scenario": "Base", "dated": "2026-08-15"},
+    {"bank": "Citi", "target": 6000, "horizon": "End-2027", "scenario": "Bull (30%)", "dated": "2026-06-30"},
+    {"bank": "Goldman Sachs", "target": 5400, "horizon": "End-2027", "scenario": "Base", "dated": "2026-09-18"},
+    {"bank": "UBS", "target": 5400, "horizon": "Sep 2027", "scenario": "Base", "dated": "2026-09-17"},
+    {"bank": "HSBC", "target": 5025, "horizon": "End-2026", "scenario": "Base (cut)", "dated": "2026-07-09"}
+  ]
+}

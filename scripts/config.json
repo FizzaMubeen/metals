@@ -1,0 +1,97 @@
+{
+  "symbols": {
+    "gold": "GC=F",
+    "silver": "SI=F",
+    "copper": "HG=F",
+    "miners": "GDX",
+    "gld": "GLD",
+    "brent": "BZ=F"
+  },
+  "cot_codes": {
+    "gold": "088691",
+    "silver": "084691",
+    "copper": "085692"
+  },
+  "weights": {
+    "fed":           {"w": 1.0, "gold": 1,   "silver": 1,   "copper": 0.8,  "miners": 1.2},
+    "real_yield":    {"w": 1.0, "gold": 1,   "silver": 1,   "copper": 0.5,  "miners": 1.2},
+    "nominal_10y":   {"w": 0.4, "gold": 1,   "silver": 0.8, "copper": 0.3,  "miners": 1},
+    "dollar":        {"w": 0.6, "gold": 1,   "silver": 1,   "copper": 1,    "miners": 1},
+    "inflation":     {"w": 0.5, "gold": 1,   "silver": 0.8, "copper": 0.3,  "miners": 0.6},
+    "oil":           {"w": 0.3, "gold": 0.5, "silver": 0.3, "copper": -0.6, "miners": -0.5},
+    "central_banks": {"w": 1.0, "gold": 1,   "silver": 0.4, "copper": 0,    "miners": 0.8},
+    "etf":           {"w": 0.6, "gold": 1,   "silver": 0.8, "copper": 0,    "miners": 0.7},
+    "cot_gold":      {"w": 0.4, "gold": 1,   "silver": 0,   "copper": 0,    "miners": 0.6},
+    "cot_silver":    {"w": 0.4, "gold": 0,   "silver": 1,   "copper": 0,    "miners": 0},
+    "cot_copper":    {"w": 0.4, "gold": 0,   "silver": 0,   "copper": 1,    "miners": 0},
+    "geopolitics":   {"w": 0.5, "gold": 1,   "silver": 0.5, "copper": -0.5, "miners": 0.6},
+    "bank_research": {"w": 0.4, "gold": 1,   "silver": 0.6, "copper": 0,    "miners": 0.8},
+    "trend_gold":    {"w": 0.6, "gold": 1,   "silver": 0.3, "copper": 0,    "miners": 1},
+    "trend_silver":  {"w": 0.6, "gold": 0,   "silver": 1,   "copper": 0,    "miners": 0},
+    "trend_copper":  {"w": 0.6, "gold": 0,   "silver": 0.2, "copper": 1,    "miners": 0},
+    "miners":        {"w": 0.4, "gold": 0.8, "silver": 0.5, "copper": 0,    "miners": 1.5},
+    "gs_ratio":      {"w": 0.3, "gold": 0,   "silver": 1,   "copper": 0,    "miners": 0},
+    "news_gold":     {"w": 0.3, "gold": 1,   "silver": 0,   "copper": 0,    "miners": 0.5},
+    "news_silver":   {"w": 0.3, "gold": 0,   "silver": 1,   "copper": 0,    "miners": 0},
+    "news_copper":   {"w": 0.3, "gold": 0,   "silver": 0,   "copper": 1,    "miners": 0}
+  },
+  "news_days": 14,
+  "news_max": 150,
+  "news_queries": [
+    "gold price",
+    "silver price",
+    "copper price",
+    "central bank gold reserves",
+    "central bank gold buying",
+    "central bank sells gold",
+    "gold ETF flows",
+    "gold price forecast bank",
+    "Federal Reserve gold",
+    "gold mining stocks"
+  ],
+  "news_feeds": [
+    {"name": "Mining.com", "url": "https://www.mining.com/feed/"}
+  ],
+  "lexicon": {
+    "metals": {
+      "gold": ["gold", "bullion", "xau"],
+      "silver": ["silver", "xag"],
+      "copper": ["copper"]
+    },
+    "topics": {
+      "central banks": ["central bank", "pboc", "people's bank", "reserve bank", "national bank", "official sector", "gold reserves", "rbi", "reserves"],
+      "ETFs": ["etf", "spdr", "gld", "iau", "fund flows", "inflows", "outflows"],
+      "Fed and rates": ["fed", "federal reserve", "powell", "rate hike", "rate cut", "interest rate", "yields", "treasury", "fomc", "inflation", "cpi", "pce"],
+      "geopolitics": ["war", "iran", "israel", "russia", "ukraine", "china", "tariff", "sanction", "conflict", "election", "attack", "missile", "hormuz", "geopolitic"],
+      "mining": ["mine", "mining", "miner", "output", "production", "smelter", "newmont", "barrick", "freeport", "codelco", "supply"],
+      "bank research": ["forecast", "target", "goldman", "jpmorgan", "j.p. morgan", "deutsche bank", "ubs", "citi", "hsbc", "bank of america", "morgan stanley", "outlook"],
+      "demand": ["jewellery", "jewelry", "india", "diwali", "wedding", "premium", "discount", "imports", "coins", "bars"]
+    },
+    "bullish": ["rise", "rises", "rising", "rose", "gain", "gains", "jump", "surge", "soar", "rally", "rallies", "record", "climb", "high", "up ", "boost", "buy", "buying", "bought", "adds", "added", "inflow", "inflows", "rebound", "recover", "strong", "demand", "safe haven", "safe-haven", "bullish", "raise", "raises", "upgrade", "shortage", "deficit"],
+    "bearish": ["fall", "falls", "fell", "falling", "drop", "drops", "slump", "slide", "plunge", "tumble", "sink", "decline", "loss", "losses", "low", "down ", "sell", "selling", "sold", "outflow", "outflows", "weak", "bearish", "cut", "cuts", "downgrade", "selloff", "sell-off", "liquidation", "surplus", "crash"],
+    "cb_buy": ["buy", "buys", "buying", "bought", "add", "adds", "added", "adding", "purchase", "purchases", "accumulat", "increase", "boost", "raises"],
+    "cb_sell": ["sell", "sells", "selling", "sold", "dump", "offload", "reduce", "cut", "cuts", "drawdown", "decline in gold reserves", "lower"],
+    "countries": {
+      "China": ["china", "chinese", "pboc", "people's bank"],
+      "Poland": ["poland", "polish", "nbp"],
+      "India": ["india", "rbi", "reserve bank of india"],
+      "Turkey": ["turkey", "turkish", "türkiye"],
+      "Russia": ["russia", "russian"],
+      "Uzbekistan": ["uzbekistan"],
+      "Kazakhstan": ["kazakhstan"],
+      "Czech Republic": ["czech", "cnb"],
+      "Singapore": ["singapore", "mas "],
+      "Japan": ["japan", "boj"],
+      "Brazil": ["brazil"],
+      "Qatar": ["qatar"],
+      "Iraq": ["iraq"],
+      "Egypt": ["egypt"],
+      "Ghana": ["ghana"],
+      "Philippines": ["philippines"],
+      "Pakistan": ["pakistan", "sbp"],
+      "Korea": ["korea"],
+      "Germany": ["germany", "bundesbank"],
+      "United States": ["u.s.", "us treasury", "fort knox"]
+    }
+  }
+}

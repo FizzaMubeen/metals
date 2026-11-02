@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Metals News & Learnings</title>
+  <meta name="description" content="Daily news, data and learnings on gold, silver and copper: who is buying, who is selling, and what it means.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-in">
+      <div>
+        <h1>Metals News <span class="amp">&amp;</span> Learnings</h1>
+        <p class="sub">Gold, silver and copper: the news, who is buying and selling, and what it teaches us. <span id="updated">Loading…</span></p>
+      </div>
+      <button class="theme" id="theme" type="button" aria-label="Switch light or dark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+    </div>
+    <nav class="wrap tabs" role="tablist">
+      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="indicators" aria-selected="false">Indicators</button>
+      <button role="tab" data-tab="news" aria-selected="false">News</button>
+      <button role="tab" data-tab="buyers" aria-selected="false">Who's buying</button>
+      <button role="tab" data-tab="learnings" aria-selected="false">Learnings</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <div id="alert" class="alert" hidden></div>
+
+    <section id="tab-overview" class="tab">
+      <ul id="takeaways" class="takeaways"></ul>
+      <div id="assets" class="grid4"></div>
+      <div class="card">
+        <h2>Score history</h2>
+        <p class="muted">Each metal's daily score, from −100 (selling pressure) to +100 (buying pressure).</p>
+        <div id="history" class="chart"></div>
+      </div>
+    </section>
+
+    <section id="tab-indicators" class="tab" hidden>
+      <div class="row-between">
+        <h2>What is pushing each metal</h2>
+        <div class="chips" id="asset-picker"></div>
+      </div>
+      <div class="card">
+        <p class="muted">Right is bullish, left is bearish. Each bar is one indicator's push on the selected metal, from its latest data.</p>
+        <div id="factor-chart"></div>
+      </div>
+      <div class="card">
+        <h2>All indicators</h2>
+        <div class="table-wrap"><table id="factor-table" class="table"></table></div>
+      </div>
+    </section>
+
+    <section id="tab-news" class="tab" hidden>
+      <div class="filters">
+        <div class="chips" id="metal-filter"></div>
+        <div class="chips" id="topic-filter"></div>
+        <input id="news-search" type="search" placeholder="Search headlines" aria-label="Search headlines">
+      </div>
+      <p class="muted" id="news-count"></p>
+      <ul id="news-list" class="news"></ul>
+    </section>
+
+    <section id="tab-buyers" class="tab" hidden>
+      <div class="grid2">
+        <div class="card">
+          <h2>Latest official buying</h2>
+          <div id="cb-tiles" class="tiles"></div>
+          <ul id="cb-highlights" class="plain"></ul>
+          <p class="muted" id="cb-source"></p>
+        </div>
+        <div class="card">
+          <h2 id="cb-country-title">Net change by country</h2>
+          <p class="muted">Tonnes reported to the IMF. Buyers right, sellers left.</p>
+          <div id="cb-chart"></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Buying in the news</h2>
+          <ul id="cb-buy-news" class="news compact"></ul>
+        </div>
+        <div class="card">
+          <h2>Selling in the news</h2>
+          <ul id="cb-sell-news" class="news compact"></ul>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Bank research: gold targets vs today</h2>
+        <p class="muted">Each line runs from today's gold price to a bank's published target.</p>
+        <div id="bank-chart"></div>
+      </div>
+    </section>
+
+    <section id="tab-learnings" class="tab" hidden>
+      <div class="card">
+        <h2>Our notes</h2>
+        <ul id="notes" class="notes"></ul>
+      </div>
+      <h2>What each factor teaches</h2>
+      <div id="lessons" class="grid2"></div>
+    </section>
+
+    <footer class="foot">
+      Data: Yahoo Finance, FRED (St. Louis Fed), CFTC, World Gold Council, Google News, Mining.com. Updated automatically every day.
+      This is a research and learning tool, not financial advice.
+    </footer>
+  </main>
+
+  <div id="tip" class="tip" hidden></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

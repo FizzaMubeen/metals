@@ -1,0 +1,42 @@
+name: Daily fetch
+
+on:
+  schedule:
+    - cron: "30 5 * * *"   # every day at 05:30 UTC (06:30 Berlin in winter)
+  workflow_dispatch:        # "Run workflow" button for a fetch on demand
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-fetch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Fetch news and data
+        run: python scripts/fetch.py
+
+      - name: Save the new data
+        run: |
+          git config user.name "metals-bot"
+          git config user.email "metals-bot@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "Daily data $(date -u +%Y-%m-%d)"
+            git push
+          fi

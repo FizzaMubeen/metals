@@ -1,0 +1,21 @@
+{
+  "_how_to_update": "Add your own notes to the 'notes' list (newest first). Each note needs a date, an author and text. The 'lessons' list is the reference guide shown on the Learnings tab.",
+  "notes": [
+    {"date": "2026-11-02", "author": "Fizza & Mustaeen", "text": "Our view: metals are a long-term store of value, not a quick-gain trade. Trading metals as a business is a different game from keeping assets in metal."},
+    {"date": "2026-11-02", "author": "Fizza & Mustaeen", "text": "Gold fell below $4,000 in late October during a tech-stock selloff: margin calls forced investors to sell gold for cash, even with a war and high oil. Liquidation can beat safe-haven demand for a while."}
+  ],
+  "lessons": [
+    {"title": "Gold and copper mining shares", "text": "Miners are a leveraged bet on the metal: their profit is price minus costs, so they move more. They often turn before gold does, so miners lagging gold is an early warning and miners leading is an early buy sign."},
+    {"title": "Bond market and real yields", "text": "Gold pays no interest, so its competitor is the inflation-adjusted (real) bond yield. When real yields fall, gold usually rises. Since 2022 central bank buying has sometimes overpowered this link."},
+    {"title": "International politics", "text": "Wars, sanctions and elections push money into gold as a safe haven. Sanctions on Russia's reserves in 2022 also convinced many central banks to hold more gold instead of dollars."},
+    {"title": "Fed interest rates", "text": "Rate hikes raise the reward for holding cash and bonds and usually strengthen the dollar, both bad for metals. Cuts do the opposite. Markets move on expected rates, so watch the odds for the next meeting, not only the decision."},
+    {"title": "Bank research (JPMorgan, Deutsche Bank and others)", "text": "Banks publish best, base and worst cases. Their targets lag the market, so the useful signal is the direction of revisions: several banks raising targets together is bullish, a wave of cuts is bearish."},
+    {"title": "Who is buying and who is selling", "text": "Central banks (China, Poland, India, Turkey, Kazakhstan, Uzbekistan) report monthly to the IMF; the World Gold Council publishes the totals with a 1–2 month lag. Some buying is never reported. Sellers are often countries that need cash, such as Turkey or Russia."},
+    {"title": "US dollar", "text": "Metals are priced in dollars. A weaker dollar makes them cheaper in other currencies, so demand rises."},
+    {"title": "Speculators (COT report)", "text": "Every Friday the CFTC shows how hedge funds are positioned. When they are already very long, few buyers are left and pullbacks become likelier; when they have left, there is room to rebuild."},
+    {"title": "Physical demand in Asia", "text": "India and China are the largest buyers of jewellery and bars. A local premium over the world price means strong demand; a discount means buyers are waiting. Wedding season and Diwali bring seasonal peaks."},
+    {"title": "Gold/silver ratio", "text": "How many ounces of silver buy one ounce of gold. The long-run average is roughly 65–70; a high ratio means silver is cheap relative to gold."},
+    {"title": "Copper", "text": "Copper follows the economy: China's factories, power grids, electric vehicles and data centres. Mine supply problems (Chile, Peru, Congo) and warehouse stocks matter more for copper than for gold."},
+    {"title": "How to read the scores", "text": "Each indicator is scored from −100 (bearish) to +100 (bullish) with simple rules from its data, weighted by importance and by how much it applies to each metal, then averaged. The bars show the pressure on prices today, not a forecast and not financial advice."}
+  ]
+}
