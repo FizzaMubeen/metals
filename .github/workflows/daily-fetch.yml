@@ -2,8 +2,8 @@ name: Daily fetch
 
 on:
   schedule:
-    - cron: "30 5 * * *"   # every day at 05:30 UTC (06:30 Berlin in winter)
-  workflow_dispatch:        # "Run workflow" button for a fetch on demand
+    - cron: "30 5 * * *" # every day at 05:30 UTC (06:30 Berlin in winter)
+  workflow_dispatch: # "Run workflow" button for a fetch on demand
 
 permissions:
   contents: write
@@ -16,9 +16,9 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -36,7 +36,12 @@ jobs:
           git add data/
           if git diff --cached --quiet; then
             echo "No changes."
-          else
-            git commit -m "Daily data $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "Daily data $(date -u +%Y-%m-%d)"
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push origin main && exit 0
+            echo "Push failed, retrying ($i)..."
+            sleep 5
+          done
+          exit 1
