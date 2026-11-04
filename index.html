@@ -3,116 +3,133 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Metals News & Learnings</title>
-  <meta name="description" content="Daily news, data and learnings on gold, silver and copper: who is buying, who is selling, and what it means.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>Metals Signal Tracker</title>
+  <meta name="description" content="A rules-based buy, hold or sell lean for gold, silver, copper and gold miners, from macro data, flows and sentiment.">
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <header class="top">
-    <div class="wrap top-in">
-      <div>
-        <h1>Metals News <span class="amp">&amp;</span> Learnings</h1>
-        <p class="sub">Gold, silver and copper: the news, who is buying and selling, and what it teaches us. <span id="updated">Loading…</span></p>
-      </div>
-      <button class="theme" id="theme" type="button" aria-label="Switch light or dark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+<main class="mt">
+  <header class="mt-head" id="top">
+    <h1 class="mt-title">Metals Signal Tracker</h1>
+    <p class="mt-take">Gold reads <b data-draw="verdict-text" data-asset="Gold">—</b> today. Strongest support: <b data-draw="driver" data-side="support">—</b>. Biggest headwind: <b data-draw="driver" data-side="headwind">—</b>.</p>
+    <div class="mt-status" id="data-status">
+      <p class="mt-muted"><span class="mt-fetched"><span class="mt-dot" data-draw="fresh-dot"></span>Fetched <b data-draw="fetched">—</b></span> · prices as of <span data-draw="asof">—</span> · a rules-based lean, not financial advice</p>
+      <button type="button" class="mt-refresh" id="refresh-btn" aria-busy="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        <span class="mt-refresh-idle">Refresh data</span><span class="mt-refresh-busy" hidden>Refreshing…</span>
+      </button>
     </div>
-    <nav class="wrap tabs" role="tablist">
-      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
-      <button role="tab" data-tab="indicators" aria-selected="false">Indicators</button>
-      <button role="tab" data-tab="news" aria-selected="false">News</button>
-      <button role="tab" data-tab="buyers" aria-selected="false">Who's buying</button>
-      <button role="tab" data-tab="learnings" aria-selected="false">Learnings</button>
-    </nav>
+    <p class="mt-muted">Data is fetched automatically every morning. Refresh loads the newest copy without reloading the page.<span class="mt-runwrap" hidden> Need it sooner? <a class="mt-runlink" target="_blank" rel="noopener noreferrer">Fetch new data on GitHub</a> (Run workflow), then press Refresh after a few minutes.</span></p>
   </header>
 
-  <main class="wrap">
-    <div id="alert" class="alert" hidden></div>
+  <section class="mt-section" id="assets">
+    <h2 class="mt-h2">Buy, hold or sell lean</h2>
+    <div class="mt-grid">
+      <article class="mt-card" id="asset-gold">
+        <div class="mt-row"><h3>Gold</h3><span class="mt-badge" data-draw="badge" data-asset="Gold">—</span></div>
+        <div class="mt-price"><span data-draw="price" data-asset="Gold">—</span> <span class="mt-unit">per oz</span></div>
+        <p class="mt-sub">1 month <span data-draw="chg" data-asset="Gold">—</span> · from record <span data-draw="offrec" data-asset="Gold">—</span></p>
+        <div class="mt-lean" data-draw="lean" data-asset="Gold"></div>
+        <div class="mt-groups" data-draw="groups" data-asset="Gold"></div>
+        <p class="mt-score">Score <b data-draw="score" data-asset="Gold">—</b> on a −100 to +100 scale</p>
+      </article>
+      <article class="mt-card" id="asset-silver">
+        <div class="mt-row"><h3>Silver</h3><span class="mt-badge" data-draw="badge" data-asset="Silver">—</span></div>
+        <div class="mt-price"><span data-draw="price" data-asset="Silver">—</span> <span class="mt-unit">per oz</span></div>
+        <p class="mt-sub">1 month <span data-draw="chg" data-asset="Silver">—</span> · from record <span data-draw="offrec" data-asset="Silver">—</span></p>
+        <div class="mt-lean" data-draw="lean" data-asset="Silver"></div>
+        <div class="mt-groups" data-draw="groups" data-asset="Silver"></div>
+        <p class="mt-score">Score <b data-draw="score" data-asset="Silver">—</b> on a −100 to +100 scale</p>
+      </article>
+      <article class="mt-card" id="asset-copper">
+        <div class="mt-row"><h3>Copper</h3><span class="mt-badge" data-draw="badge" data-asset="Copper">—</span></div>
+        <div class="mt-price"><span data-draw="price" data-asset="Copper">—</span> <span class="mt-unit">per lb</span></div>
+        <p class="mt-sub">1 month <span data-draw="chg" data-asset="Copper">—</span> · from record <span data-draw="offrec" data-asset="Copper">—</span></p>
+        <div class="mt-lean" data-draw="lean" data-asset="Copper"></div>
+        <div class="mt-groups" data-draw="groups" data-asset="Copper"></div>
+        <p class="mt-score">Score <b data-draw="score" data-asset="Copper">—</b> on a −100 to +100 scale</p>
+      </article>
+      <article class="mt-card" id="asset-miners">
+        <div class="mt-row"><h3>Gold miners</h3><span class="mt-badge" data-draw="badge" data-asset="Gold miners">—</span></div>
+        <div class="mt-price"><span data-draw="price" data-asset="Gold miners">—</span> <span class="mt-unit">GDX share</span></div>
+        <p class="mt-sub">1 month <span data-draw="chg" data-asset="Gold miners">—</span> · from 52-week high <span data-draw="offrec" data-asset="Gold miners">—</span></p>
+        <div class="mt-lean" data-draw="lean" data-asset="Gold miners"></div>
+        <div class="mt-groups" data-draw="groups" data-asset="Gold miners"></div>
+        <p class="mt-score">Score <b data-draw="score" data-asset="Gold miners">—</b> on a −100 to +100 scale</p>
+      </article>
+    </div>
+    <p class="mt-muted">The bar shows how strongly the signals lean: a score of +30 means 30% buy, 70% hold. Below it, the score split into Macro (Fed, bonds, dollar, inflation), Flows (who is buying) and Sentiment (miners, politics, bank research, price trend).</p>
+  </section>
 
-    <section id="tab-overview" class="tab">
-      <ul id="takeaways" class="takeaways"></ul>
-      <div id="assets" class="grid4"></div>
-      <div class="card">
-        <h2>Score history</h2>
-        <p class="muted">Each metal's daily score, from −100 (selling pressure) to +100 (buying pressure).</p>
-        <div id="history" class="chart"></div>
+  <section class="mt-section" id="drivers">
+    <div class="mt-row">
+      <h2 class="mt-h2">What the signals say for each metal</h2>
+      <div class="mt-seg" role="group" aria-label="Asset">
+        <button type="button" data-asset="Gold" aria-pressed="true">Gold</button>
+        <button type="button" data-asset="Silver" aria-pressed="false">Silver</button>
+        <button type="button" data-asset="Copper" aria-pressed="false">Copper</button>
+        <button type="button" data-asset="Gold miners" aria-pressed="false">Gold miners</button>
       </div>
-    </section>
+    </div>
+    <article class="mt-card">
+      <p class="mt-muted">Each bar is one indicator's push on the selected asset: right is bullish, left is bearish. Hover or tap a bar for the reading behind it.</p>
+      <div class="mt-chart" id="drivers-chart" data-draw="drivers"></div>
+    </article>
+  </section>
 
-    <section id="tab-indicators" class="tab" hidden>
-      <div class="row-between">
-        <h2>What is pushing each metal</h2>
-        <div class="chips" id="asset-picker"></div>
-      </div>
-      <div class="card">
-        <p class="muted">Right is bullish, left is bearish. Each bar is one indicator's push on the selected metal, from its latest data.</p>
-        <div id="factor-chart"></div>
-      </div>
-      <div class="card">
-        <h2>All indicators</h2>
-        <div class="table-wrap"><table id="factor-table" class="table"></table></div>
-      </div>
-    </section>
-
-    <section id="tab-news" class="tab" hidden>
-      <div class="filters">
-        <div class="chips" id="metal-filter"></div>
-        <div class="chips" id="topic-filter"></div>
-        <input id="news-search" type="search" placeholder="Search headlines" aria-label="Search headlines">
-      </div>
-      <p class="muted" id="news-count"></p>
-      <ul id="news-list" class="news"></ul>
-    </section>
-
-    <section id="tab-buyers" class="tab" hidden>
-      <div class="grid2">
-        <div class="card">
-          <h2>Latest official buying</h2>
-          <div id="cb-tiles" class="tiles"></div>
-          <ul id="cb-highlights" class="plain"></ul>
-          <p class="muted" id="cb-source"></p>
+  <section class="mt-section" id="who-buys">
+    <h2 class="mt-h2">Who's buying and who's selling: central banks</h2>
+    <div class="mt-grid2">
+      <article class="mt-card" id="cb-latest">
+        <h3>Latest official buying</h3>
+        <div class="mt-tiles">
+          <div class="mt-tile"><span class="mt-tile-n"><span data-draw="cbv" data-metric="Global net buying, September">—</span> t</span><span class="mt-muted">Global central bank net buying, latest month</span></div>
+          <div class="mt-tile"><span class="mt-tile-n"><span data-draw="cbv" data-metric="China, September">—</span> t</span><span class="mt-muted">Added by China, latest month</span></div>
+          <div class="mt-tile"><span class="mt-tile-n"><span data-draw="cbv" data-metric="China buying streak">—</span></span><span class="mt-muted">Months in a row China has bought</span></div>
+          <div class="mt-tile"><span class="mt-tile-n"><span data-draw="cbv" data-metric="China total reserves">—</span> t</span><span class="mt-muted">China's official gold reserves</span></div>
         </div>
-        <div class="card">
-          <h2 id="cb-country-title">Net change by country</h2>
-          <p class="muted">Tonnes reported to the IMF. Buyers right, sellers left.</p>
-          <div id="cb-chart"></div>
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="card">
-          <h2>Buying in the news</h2>
-          <ul id="cb-buy-news" class="news compact"></ul>
-        </div>
-        <div class="card">
-          <h2>Selling in the news</h2>
-          <ul id="cb-sell-news" class="news compact"></ul>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Bank research: gold targets vs today</h2>
-        <p class="muted">Each line runs from today's gold price to a bank's published target.</p>
-        <div id="bank-chart"></div>
-      </div>
-    </section>
+      </article>
+      <article class="mt-card" id="cb-countries">
+        <h3>Net change by country, <span data-draw="cb-period">—</span></h3>
+        <p class="mt-muted">Tonnes reported to the IMF and World Gold Council. Buyers right, sellers left.</p>
+        <div class="mt-chart" id="cb-chart" data-draw="cb"></div>
+      </article>
+    </div>
+  </section>
 
-    <section id="tab-learnings" class="tab" hidden>
-      <div class="card">
-        <h2>Our notes</h2>
-        <ul id="notes" class="notes"></ul>
+  <section class="mt-section" id="bank-research">
+    <h2 class="mt-h2">Bank research: gold targets vs today</h2>
+    <article class="mt-card">
+      <p class="mt-muted">Each line runs from today's gold price to a bank's published target.</p>
+      <div class="mt-chart" id="bank-chart" data-draw="banks"></div>
+    </article>
+  </section>
+
+  <section class="mt-section" id="signals">
+    <h2 class="mt-h2">All indicators</h2>
+    <article class="mt-card">
+      <p class="mt-muted"><span class="mt-tag">auto</span> updates itself every morning from public market data. <span class="mt-tag">manual</span> is edited by hand in <code>data/signals.json</code>.</p>
+      <div class="mt-tablewrap">
+        <table class="mt-table">
+          <thead><tr>
+            <th>Pillar</th>
+            <th>Indicator</th>
+            <th class="mt-hide-narrow">Latest reading</th>
+            <th>As of</th>
+            <th>Score</th>
+            <th class="mt-hide-narrow">Source</th>
+          </tr></thead>
+          <tbody data-draw="sig-rows"></tbody>
+        </table>
       </div>
-      <h2>What each factor teaches</h2>
-      <div id="lessons" class="grid2"></div>
-    </section>
+    </article>
+  </section>
 
-    <footer class="foot">
-      Data: Yahoo Finance, FRED (St. Louis Fed), CFTC, World Gold Council, Google News, Mining.com. Updated automatically every day.
-      This is a research and learning tool, not financial advice.
-    </footer>
-  </main>
+  <p class="mt-foot">How the score works: each indicator is scored from −100 (strongly bearish) to +100 (strongly bullish) from its latest reading, weighted by importance and by how much it applies to each asset (oil, for example, lifts gold but weighs on copper), then averaged. It describes the pressure on prices, not where they will go. Central bank data arrives with a one to two month lag. This is a research aid, not financial advice.</p>
+</main>
 
-  <div id="tip" class="tip" hidden></div>
-  <script src="assets/app.js"></script>
+<script src="assets/d3.min.js"></script>
+<script src="assets/dash.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>

@@ -1,68 +1,48 @@
-# Metals News & Learnings
+# Metals Signal Tracker
 
-A small website that tracks gold, silver and copper every day: the news, who is
-buying and who is selling (especially central banks), the key market data, and
-what each factor teaches. It runs on its own: free public data, a Python script
-and GitHub. No API keys, no paid services, no AI needed.
+A rules-based buy, hold or sell lean for **gold, silver, copper and gold miners (GDX)**, built from macro data, flows and sentiment. It runs entirely on GitHub: GitHub Pages hosts the site, and a GitHub Action fetches fresh data every morning. No servers, no API keys.
 
-## What it shows
+> A research aid, not financial advice.
 
-| Tab | What's on it |
-|---|---|
-| Overview | Price, day/month/year change and a buy / hold / sell bar for gold, silver, copper and gold miners, plus score history |
-| Indicators | What is pushing each metal, from Fed rates, bond yields, the dollar, inflation, oil, central banks, ETFs, speculator positioning, geopolitics, bank forecasts, miners and price trend |
-| News | Headlines from the last two weeks, tagged by metal, topic and tone (bullish / bearish / neutral) |
-| Who's buying | Central bank tonnes by country, buying and selling headlines, and bank price targets compared with today's gold price |
-| Learnings | Your own notes and a guide to what each factor means |
+## Set it up (about 5 minutes)
 
-## How it works
+1. **Create a repository** on GitHub (for example `metals-signal-tracker`) and upload every file in this folder, keeping the folders (`assets/`, `data/`, `scripts/`, `.github/workflows/`).
+2. **Turn on the website:** repository **Settings → Pages → Build and deployment → Source: Deploy from a branch**, branch `main`, folder `/ (root)`, then **Save**. After a minute the site is live at `https://<your-username>.github.io/<repo-name>/`.
+3. **Let the daily update save data:** **Settings → Actions → General → Workflow permissions → Read and write permissions → Save**.
+4. **Run the first update:** **Actions → Update data → Run workflow**. From then on it runs by itself every day at 05:54 UTC.
 
-1. `scripts/fetch.py` downloads the data:
-   - **Prices:** Yahoo Finance (gold, silver, copper futures, GDX, GLD, Brent oil)
-   - **Macro:** FRED, St. Louis Fed (Fed target rate, 10Y real yield, 10Y yield, inflation expectations, dollar index)
-   - **Speculators:** CFTC Commitments of Traders (gold, silver, copper)
-   - **News:** Google News RSS searches and Mining.com, tagged with keyword rules
-2. It scores each indicator from −100 (bearish) to +100 (bullish) with simple
-   rules, weights them per metal (`scripts/config.json`), and writes
-   `data/latest.json` and `data/history.csv`.
-3. A GitHub Actions workflow runs the script **every day at 05:30 UTC** and commits the new data.
-4. GitHub Pages serves `index.html`, which reads the data files.
+## How the data updates
 
-## Set up (once)
+| Kind | What | Where it comes from |
+|---|---|---|
+| **auto** | Prices, Fed rates, real and nominal yields, dollar, inflation and oil, speculator positioning (COT), miners, price trends | Yahoo Finance, FRED (St. Louis Fed), CFTC: all public, no key needed |
+| **manual** | Central bank buying, ETF flows, Asia demand, copper supply, geopolitics, bank research | You edit `data/signals.json` (and `cb_flows.json`, `cb_summary.json`, `bank_targets.json`) |
 
-1. **Turn on the website:** repo **Settings → Pages → Build and deployment → Source: Deploy from a branch**, branch `main`, folder `/ (root)`. Your site will be at `https://fizzamubeen.github.io/metals/`.
-2. **Let the workflow save data:** **Settings → Actions → General → Workflow permissions → Read and write permissions**.
-3. **Run the first fetch:** **Actions → Daily fetch → Run workflow**.
+- **auto** indicators are re-scored each morning by `scripts/update_data.py`. A score moves at most 15 points a day so leans change gradually.
+- If a source is down, that indicator keeps its last value; the page never goes blank.
+- The page header shows **Fetched &lt;time&gt;** with a green dot (fresh) or amber dot (older than 36 hours).
+- **Refresh data** on the page reloads the newest saved data without reloading the page. To fetch new data immediately, use **Fetch new data on GitHub** (shown on the live site), click **Run workflow**, then press Refresh after a few minutes. GitHub Pages can take a few minutes to publish the new files.
 
-## Fetch fresh data whenever you want
+## Editing a manual indicator
 
-- **On GitHub:** Actions → Daily fetch → Run workflow (takes about a minute).
-- **On your computer:**
-  ```bash
-  pip install -r requirements.txt
-  python scripts/fetch.py
-  python -m http.server 8000      # then open http://localhost:8000
-  ```
-  (Open the page through a local server; opening `index.html` directly from disk blocks the data files.)
+Open `data/signals.json` on GitHub, click the pencil, and change a row's `reading`, `as_of` (YYYY-MM-DD), `score` (−100 to +100), `source` and `url`. Leave `w` and the `f_*` columns alone unless you want to change how much an indicator counts. Commit, and the site updates.
 
-## Things you update by hand
+Score guide: Fed hiking ≈ −50 to −70, cutting ≈ +50; central bank buying over 50 t a month ≈ +60 to +80; ETF inflows ≈ +30 to +50, outflows ≈ −20 to −40; geopolitical escalation ≈ +30 to +50; bank targets far above spot ≈ +30 to +40.
 
-- **`data/central_banks.json`** (monthly): the World Gold Council publishes central bank buying early each month at gold.org/goldhub. There is no free API for this, so copy in the global net tonnes, the countries and any new bank price targets.
-- **`data/learnings.json`** (any time): add your own notes; they appear on the Learnings tab.
-- **`scripts/config.json`** (optional): change weights, news searches, keywords or countries.
+## How the lean is worked out
 
-## Changing the scoring
+For each asset: `score = Σ(score × w × f) / Σ(w × |f|)`, rounded. 25 or more is **Accumulate**, 10 or more **Lean buy**, above −10 **Hold**, above −25 **Lean reduce**, otherwise **Reduce**.
 
-Each indicator has a weight `w` and a factor per metal (`gold`, `silver`,
-`copper`, `miners`) in `scripts/config.json`. A negative factor flips the
-effect (for example, oil spikes lift gold but hurt copper). The metal's score is
-the weighted average; ≥25 reads *Accumulate*, ≥10 *Lean buy*, between −10 and
-+10 *Hold*, ≤−10 *Lean reduce*, ≤−25 *Reduce*. The bar shows that score as
-buy % (or sell %) with the rest as hold.
+## Files
 
-## Notes
+```
+index.html                     the page
+assets/style.css               styling (light and dark mode)
+assets/dash.js                 loads data/*.json and redraws the page
+assets/app.js                  calculations and charts
+data/*.json                    the data
+scripts/update_data.py         the daily fetcher (Python standard library only)
+.github/workflows/update-data.yml   runs the fetcher every morning
+```
 
-- Yahoo Finance's chart endpoint is unofficial and can change; if prices stop
-  loading, the page keeps the last good data and lists the problem at the top.
-- News tone is keyword-based, so treat it as a mood gauge, not a fact.
-- This is a research and learning tool, not financial advice.
+Run it locally: `python -m http.server` in this folder, then open http://localhost:8000.

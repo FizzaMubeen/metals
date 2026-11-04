@@ -1,0 +1,37 @@
+[
+ {
+  "country": "Poland",
+  "tonnes": 90,
+  "period": "Jan–Jul 2026"
+ },
+ {
+  "country": "China",
+  "tonnes": 60,
+  "period": "Jan–Jul 2026"
+ },
+ {
+  "country": "Uzbekistan",
+  "tonnes": 40,
+  "period": "Jan–Jul 2026"
+ },
+ {
+  "country": "Kazakhstan",
+  "tonnes": 29,
+  "period": "Jan–Jul 2026"
+ },
+ {
+  "country": "Czech Republic",
+  "tonnes": 12,
+  "period": "Jan–Jul 2026"
+ },
+ {
+  "country": "Russia",
+  "tonnes": -50,
+  "period": "Jan–Jul 2026"
+ },
+ {
+  "country": "Turkey",
+  "tonnes": -85,
+  "period": "Jan–Jul 2026"
+ }
+]

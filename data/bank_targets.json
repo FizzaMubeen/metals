@@ -1,0 +1,37 @@
+[
+ {
+  "bank": "J.P. Morgan",
+  "target": 6300,
+  "horizon": "End-2027",
+  "scenario": "Base",
+  "dated": "2026-08-15"
+ },
+ {
+  "bank": "Citi",
+  "target": 6000,
+  "horizon": "End-2027",
+  "scenario": "Bull (30%)",
+  "dated": "2026-06-30"
+ },
+ {
+  "bank": "Goldman Sachs",
+  "target": 5400,
+  "horizon": "End-2027",
+  "scenario": "Base",
+  "dated": "2026-09-18"
+ },
+ {
+  "bank": "UBS",
+  "target": 5400,
+  "horizon": "Sep 2027",
+  "scenario": "Base",
+  "dated": "2026-09-17"
+ },
+ {
+  "bank": "HSBC",
+  "target": 5025,
+  "horizon": "End-2026",
+  "scenario": "Base (cut)",
+  "dated": "2026-07-09"
+ }
+]

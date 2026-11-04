@@ -1,414 +1,372 @@
-/* Metals News & Learnings — front end. Plain JavaScript, no build step. */
+// Calculations and drawings for the Metals Signal Tracker.
 (() => {
-  'use strict';
-  const $ = (s, r = document) => r.querySelector(s);
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
-  const SVG = 'http://www.w3.org/2000/svg';
-  const svgEl = (tag, attrs = {}, text) => {
-    const n = document.createElementNS(SVG, tag);
-    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
-    if (text != null) n.textContent = text;
-    return n;
-  };
-  const nf = (v, d = 2) => v == null || isNaN(v) ? '—' : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const signed = (v, d = 1, suf = '%') => v == null || isNaN(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), d) + suf;
-  const money = (v) => v == null ? '—' : '$' + (Math.abs(v) >= 1000 ? nf(v, 0) : nf(v, 2));
-  const col = (s) => s > 0 ? 'var(--up)' : s < 0 ? 'var(--down)' : 'var(--hold)';
-  const tone = (s) => s >= 10 ? 'buy' : s <= -10 ? 'sell' : 'hold';
-  const when = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso.length === 10 ? iso + 'T00:00:00Z' : iso.replace('Z', ':00Z'));
-    if (isNaN(d)) return iso;
-    const h = (Date.now() - d) / 36e5;
-    if (iso.length > 10 && h < 24) return h < 1 ? 'just now' : Math.round(h) + 'h ago';
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-  const safeUrl = (u) => typeof u === 'string' && /^https?:\/\//.test(u) ? u : null;
+  const ASSETS = { 'Gold': 'f_gold', 'Silver': 'f_silver', 'Copper': 'f_copper', 'Gold miners': 'f_miners' };
+  const STALE_HOURS = 36;
 
-  const ASSETS = [['gold', 'Gold', 'per oz'], ['silver', 'Silver', 'per oz'], ['copper', 'Copper', 'per lb'], ['miners', 'Gold miners', 'GDX share']];
-  const state = { asset: 'gold', metal: 'all', topic: 'all', q: '' };
-  let D = null, LEARN = null, CB = null, HIST = [];
+  // ---------- Calculations ----------
+  const weighted = (signals, f, filter) => {
+    let num = 0, den = 0;
+    for (const s of signals) {
+      if (filter && !filter(s)) continue;
+      const k = Number(s[f]) || 0, w = Number(s.w) || 0;
+      num += Number(s.score) * w * k;
+      den += w * Math.abs(k);
+    }
+    return den ? Math.round(num / den) : null;
+  };
+  const verdictOf = (score) => score >= 25 ? 'Accumulate' : score >= 10 ? 'Lean buy' : score > -10 ? 'Hold' : score > -25 ? 'Lean reduce' : 'Reduce';
 
-  // ---------- theme
-  const root = document.documentElement;
-  try { const t = localStorage.getItem('theme'); if (t) root.dataset.theme = t; } catch (e) { /* ignore */ }
-  $('#theme').addEventListener('click', () => {
-    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-    root.dataset.theme = dark ? 'light' : 'dark';
-    try { localStorage.setItem('theme', root.dataset.theme); } catch (e) { /* ignore */ }
+  dash.calc('asset_scores', {
+    inputs: ['signals'],
+    fn: (signals) => Object.entries(ASSETS).map(([asset, f]) => {
+      const score = weighted(signals, f) ?? 0;
+      const buy = Math.max(0, score), sell = Math.max(0, -score);
+      return { asset, score, buy, hold: 100 - buy - sell, sell, verdict: verdictOf(score) };
+    }),
   });
 
-  // ---------- tabs
-  const showTab = (name) => {
-    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-    document.querySelectorAll('.tab').forEach((t) => { t.hidden = t.id !== 'tab-' + name; });
-    if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
-    render();
-  };
-  document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  addEventListener('hashchange', () => {
-    const t = location.hash.slice(1);
-    if (document.querySelector(`.tabs button[data-tab="${t}"]`)) showTab(t);
-  });
-
-  // ---------- tooltip
-  const tip = $('#tip');
-  const showTip = (ev, title, body) => {
-    tip.replaceChildren(el('b', null, title), el('span', null, body));
-    tip.hidden = false;
-    const w = tip.offsetWidth, h = tip.offsetHeight;
-    tip.style.left = Math.min(innerWidth - w - 8, ev.clientX + 14) + 'px';
-    tip.style.top = Math.min(innerHeight - h - 8, ev.clientY + 14) + 'px';
-  };
-  const hideTip = () => { tip.hidden = true; };
-
-  // ---------- loading
-  const load = async (path) => {
-    const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
-    if (!r.ok) throw new Error(path + ' ' + r.status);
-    return path.endsWith('.csv') ? r.text() : r.json();
-  };
-  const parseCsv = (txt) => {
-    const lines = txt.trim().split(/\r?\n/);
-    const head = lines.shift().split(',');
-    return lines.map((l) => Object.fromEntries(l.split(',').map((v, i) => [head[i], v])));
-  };
-
-  Promise.allSettled([load('data/latest.json'), load('data/learnings.json'), load('data/central_banks.json'), load('data/history.csv')])
-    .then(([a, b, c, d]) => {
-      D = a.status === 'fulfilled' ? a.value : null;
-      LEARN = b.status === 'fulfilled' ? b.value : null;
-      CB = c.status === 'fulfilled' ? c.value : (D && D.central_banks) || null;
-      HIST = d.status === 'fulfilled' ? parseCsv(d.value) : [];
-      if (!D) {
-        const al = $('#alert');
-        al.hidden = false;
-        al.textContent = 'No data yet. Run the "Daily fetch" workflow on GitHub (Actions tab → Daily fetch → Run workflow), or run python scripts/fetch.py on your computer.';
-        $('#updated').textContent = '';
-      } else {
-        $('#updated').textContent = 'Updated ' + when(D.generated_at) + '.';
-        if (D.errors && D.errors.length) {
-          const al = $('#alert');
-          al.hidden = false;
-          al.textContent = 'Some sources could not be reached in the last update: ' + D.errors.join('; ') + '. Older values are shown where available.';
+  dash.calc('group_scores', {
+    inputs: ['signals'],
+    fn: (signals) => {
+      const out = [];
+      for (const [asset, f] of Object.entries(ASSETS)) {
+        for (const grp of ['Macro', 'Flows', 'Sentiment']) {
+          out.push({ asset, grp, score: weighted(signals, f, (s) => s.grp === grp) });
         }
       }
-      buildControls();
-      const start = (location.hash || '#overview').slice(1);
-      showTab(document.querySelector(`.tabs button[data-tab="${start}"]`) ? start : 'overview');
+      return out;
+    },
+  });
+
+  dash.calc('top_drivers', {
+    inputs: ['signals'],
+    fn: (signals) => {
+      const rows = signals
+        .map((s) => ({ indicator: s.indicator, impact: Number(s.score) * Number(s.w) * Number(s.f_gold) }))
+        .filter((s) => s.impact !== 0)
+        .sort((a, b) => b.impact - a.impact);
+      if (!rows.length) return [];
+      return [
+        { side: 'support', indicator: rows[0].indicator },
+        { side: 'headwind', indicator: rows[rows.length - 1].indicator },
+      ];
+    },
+  });
+
+  dash.calc('price_stats', {
+    inputs: ['prices'],
+    fn: (prices) => prices.map((p) => ({
+      asset: p.asset,
+      from_record_pct: p.record ? Math.round((Number(p.price) / Number(p.record) - 1) * 1000) / 10 : null,
+    })),
+  });
+
+  // ---------- Helpers ----------
+  const rowOf = (id, key, val) => {
+    const d = dash.data(id);
+    return d.status === 'ok' ? (d.data || []).find((r) => r[key] === val) : null;
+  };
+  const money = (v) => '$' + (Math.abs(v) >= 1000 ? d3.format(',.0f')(v) : d3.format(',.2f')(v));
+  const pct = (v) => d3.format('+.1f')(v) + '%';
+  const tone = (s) => (s >= 10 ? 'is-buy' : s <= -10 ? 'is-sell' : 'is-hold');
+  const signedCol = (s) => (s > 0 ? 'var(--color-ok)' : s < 0 ? 'var(--color-bad)' : 'var(--chart-muted)');
+  const fmtDate = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00Z'); return isNaN(d) ? '—' : d3.utcFormat('%-d %b %Y')(d); };
+  const fetchedAt = () => {
+    const r = rowOf('prices', 'asset', 'Gold');
+    const t = r && r.fetched_at ? new Date(r.fetched_at) : null;
+    return t && !isNaN(t) ? t : null;
+  };
+
+  // ---------- Controls ----------
+  document.querySelectorAll('.mt-seg button').forEach((b) => {
+    b.addEventListener('click', () => dash.setParams({ asset: b.dataset.asset }));
+  });
+  document.querySelectorAll('.mt-refresh').forEach((b) => {
+    b.addEventListener('click', () => dash.refreshAll());
+  });
+  dash.onData(() => {
+    const a = dash.params().asset || 'Gold';
+    document.querySelectorAll('.mt-seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.asset === a)));
+    const busy = dash.sources.some((id) => { const d = dash.data(id); return d.refreshing || d.status === 'loading'; });
+    document.querySelectorAll('.mt-refresh').forEach((b) => { b.disabled = busy; b.setAttribute('aria-busy', String(busy)); });
+    document.querySelectorAll('.mt-refresh-idle').forEach((s) => { s.hidden = busy; });
+    document.querySelectorAll('.mt-refresh-busy').forEach((s) => { s.hidden = !busy; });
+  });
+
+  // Link to the "Run workflow" page when hosted on GitHub Pages (user.github.io/repo).
+  (() => {
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+    const repo = location.pathname.split('/').filter(Boolean)[0];
+    if (!m || !repo) return;
+    const href = `https://github.com/${m[1]}/${repo}/actions/workflows/update-data.yml`;
+    document.querySelectorAll('.mt-runlink').forEach((a) => { a.href = href; });
+    document.querySelectorAll('.mt-runwrap').forEach((s) => { s.hidden = false; });
+  })();
+
+  // ---------- Small drawings ----------
+  dash.draw('fetched', (el) => {
+    const t = fetchedAt();
+    const p = dash.data('prices');
+    el.classList.toggle('mt-error', p.status === 'error');
+    el.textContent = p.status === 'error' ? 'data failed to load' : t ? d3.timeFormat('%-I:%M %p, %-d %b %Y')(t) : '—';
+  });
+  dash.draw('fresh-dot', (el) => {
+    const t = fetchedAt();
+    const stale = t && (Date.now() - t.getTime()) / 36e5 > STALE_HOURS;
+    el.className = 'mt-dot' + (t ? (stale ? ' is-stale' : ' is-fresh') : '');
+    el.title = t ? (stale ? 'Older than ' + STALE_HOURS + ' hours' : 'Up to date') : '';
+  });
+  dash.draw('asof', (el) => {
+    const r = rowOf('prices', 'asset', 'Gold');
+    el.textContent = r ? fmtDate(r.as_of) : '—';
+  });
+  dash.draw('verdict-text', (el) => {
+    const r = rowOf('asset_scores', 'asset', el.dataset.asset);
+    el.textContent = r ? r.verdict : '—';
+  });
+  dash.draw('driver', (el) => {
+    const r = rowOf('top_drivers', 'side', el.dataset.side);
+    el.textContent = r ? r.indicator : '—';
+  });
+  dash.draw('badge', (el) => {
+    const r = rowOf('asset_scores', 'asset', el.dataset.asset);
+    el.className = 'mt-badge' + (r ? ' ' + tone(r.score) : '');
+    el.textContent = r ? r.verdict : '—';
+  });
+  dash.draw('price', (el) => {
+    const r = rowOf('prices', 'asset', el.dataset.asset);
+    el.textContent = r && r.price != null ? money(Number(r.price)) : '—';
+  });
+  dash.draw('chg', (el) => {
+    const r = rowOf('prices', 'asset', el.dataset.asset);
+    const v = r && r.change_1m_pct != null ? Number(r.change_1m_pct) : null;
+    el.className = v == null ? '' : v >= 0 ? 'mt-up' : 'mt-down';
+    el.textContent = v == null ? '—' : pct(v);
+  });
+  dash.draw('offrec', (el) => {
+    const r = rowOf('price_stats', 'asset', el.dataset.asset);
+    const v = r && r.from_record_pct != null ? Number(r.from_record_pct) : null;
+    el.textContent = v == null ? '—' : pct(v);
+  });
+  dash.draw('score', (el) => {
+    const r = rowOf('asset_scores', 'asset', el.dataset.asset);
+    el.textContent = r ? d3.format('+d')(r.score) : '—';
+  });
+  dash.draw('cbv', (el) => {
+    const r = rowOf('cb_summary', 'metric', el.dataset.metric);
+    el.textContent = r ? d3.format(',')(Number(r.value)) : '—';
+  });
+  dash.draw('cb-period', (el) => {
+    const d = dash.data('cb_flows');
+    el.textContent = d.status === 'ok' && d.data.length ? d.data[0].period : '—';
+  });
+
+  dash.draw('lean', (el) => {
+    el.replaceChildren();
+    const r = rowOf('asset_scores', 'asset', el.dataset.asset);
+    if (!r) return;
+    const bar = document.createElement('div');
+    bar.className = 'mt-bar';
+    const legend = document.createElement('div');
+    legend.className = 'mt-legend';
+    [['Buy', r.buy, 'mt-seg-buy'], ['Hold', r.hold, 'mt-seg-hold'], ['Sell', r.sell, 'mt-seg-sell']].forEach(([name, v, cls]) => {
+      if (v > 0) { const s = document.createElement('div'); s.className = cls; s.style.width = v + '%'; bar.appendChild(s); }
+      const item = document.createElement('span');
+      const sw = document.createElement('i'); sw.className = cls;
+      item.append(sw, document.createTextNode(name + ' ' + v + '%'));
+      legend.appendChild(item);
     });
+    el.append(bar, legend);
+  });
 
-  let resizeT;
-  addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(render, 150); });
-
-  // ---------- controls
-  function chipGroup(container, items, key) {
-    container.replaceChildren();
-    items.forEach(([val, label]) => {
-      const b = el('button', null, label);
-      b.type = 'button';
-      b.setAttribute('aria-pressed', String(state[key] === val));
-      b.addEventListener('click', () => {
-        state[key] = val;
-        container.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-        render();
-      });
-      container.appendChild(b);
+  dash.draw('groups', (el) => {
+    el.replaceChildren();
+    const d = dash.data('group_scores');
+    if (d.status !== 'ok') return;
+    d.data.filter((g) => g.asset === el.dataset.asset).forEach((g) => {
+      const row = document.createElement('div'); row.className = 'mt-grow';
+      const lab = document.createElement('span'); lab.textContent = g.grp;
+      const track = document.createElement('div'); track.className = 'mt-grow-track';
+      const val = document.createElement('span'); val.className = 'mt-grow-val';
+      if (g.score != null) {
+        const fill = document.createElement('div'); fill.className = 'mt-grow-fill';
+        const w = Math.min(50, Math.abs(g.score) / 2);
+        fill.style.left = (g.score >= 0 ? 50 : 50 - w) + '%';
+        fill.style.width = w + '%';
+        fill.style.background = signedCol(g.score);
+        track.appendChild(fill);
+        val.textContent = d3.format('+d')(g.score);
+      } else { val.textContent = '—'; }
+      row.append(lab, track, val);
+      el.appendChild(row);
     });
-  }
-  function buildControls() {
-    chipGroup($('#asset-picker'), ASSETS.map(([k, l]) => [k, l]), 'asset');
-    chipGroup($('#metal-filter'), [['all', 'All metals'], ['gold', 'Gold'], ['silver', 'Silver'], ['copper', 'Copper']], 'metal');
-    const topics = new Set();
-    (D?.news || []).forEach((n) => n.topics.forEach((t) => topics.add(t)));
-    chipGroup($('#topic-filter'), [['all', 'All topics'], ...[...topics].sort().map((t) => [t, t[0].toUpperCase() + t.slice(1)])], 'topic');
-    $('#news-search').addEventListener('input', (e) => { state.q = e.target.value.toLowerCase(); renderNews(); });
-  }
+  });
 
-  // ---------- render
-  function render() {
-    const tab = document.querySelector('.tabs button[aria-selected="true"]')?.dataset.tab || 'overview';
-    if (tab === 'overview') renderOverview();
-    if (tab === 'indicators') renderIndicators();
-    if (tab === 'news') renderNews();
-    if (tab === 'buyers') renderBuyers();
-    if (tab === 'learnings') renderLearnings();
-  }
-
-  function sparkline(hist, w, h) {
-    const s = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', height: h, preserveAspectRatio: 'none' });
-    if (!hist || hist.length < 2) return s;
-    const vals = hist.map((p) => p[1]);
-    const lo = Math.min(...vals), hi = Math.max(...vals) || 1;
-    const x = (i) => i / (vals.length - 1) * w;
-    const y = (v) => h - 2 - (v - lo) / ((hi - lo) || 1) * (h - 4);
-    const d = vals.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
-    const up = vals[vals.length - 1] >= vals[0];
-    s.appendChild(svgEl('path', { d, fill: 'none', stroke: up ? 'var(--up)' : 'var(--down)', 'stroke-width': 1.6, 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke' }));
-    return s;
-  }
-
-  function renderOverview() {
-    const tk = $('#takeaways');
-    tk.replaceChildren(...(D?.takeaways || ['Waiting for the first daily update.']).map((t) => el('li', null, t)));
-    const box = $('#assets');
-    box.replaceChildren();
-    ASSETS.forEach(([key, label, unit]) => {
-      const a = D?.assets?.find((x) => x.asset === key);
-      const p = D?.prices?.[key];
-      const c = el('article', 'card asset');
-      const head = el('div', 'head');
-      head.append(el('h3', null, label));
-      if (a) head.append(el('span', 'badge ' + tone(a.score), a.verdict));
-      c.append(head);
-      const pr = el('div', 'price', p ? money(p.price) + ' ' : '—');
-      pr.append(el('small', null, unit));
-      c.append(pr);
-      const ch = el('div', 'changes');
-      if (p) {
-        [['Day', p.chg_1d], ['Month', p.chg_1m], ['Year', p.chg_1y]].forEach(([n, v], i) => {
-          if (i) ch.append(' · ');
-          ch.append(n + ' ');
-          ch.append(el('span', v > 0 ? 'up' : v < 0 ? 'down' : '', signed(v)));
-        });
-      }
-      c.append(ch);
-      if (p) { const sp = el('div', 'spark'); sp.append(sparkline(p.history.slice(-130), 240, 40)); c.append(sp); }
-      if (a) {
-        const bar = el('div', 'lean');
-        [['b', a.buy], ['h', a.hold], ['s', a.sell]].forEach(([k, v]) => { if (v > 0) { const s = el('div', k); s.style.width = v + '%'; bar.append(s); } });
-        const lg = el('div', 'legend');
-        [['Buy', a.buy, 'var(--up)'], ['Hold', a.hold, 'var(--hold)'], ['Sell', a.sell, 'var(--down)']].forEach(([n, v, cl]) => {
-          const it = el('span'); const sw = el('i'); sw.style.background = cl; it.append(sw, n + ' ' + v + '%'); lg.append(it);
-        });
-        c.append(bar, lg);
-        const gr = el('div', 'groups');
-        ['Macro', 'Flows', 'Sentiment'].forEach((g) => {
-          const v = a.groups?.[g];
-          const row = el('div', 'grow');
-          const tr = el('div', 'track');
-          if (v != null) {
-            const f = el('div', 'fill'); const w = Math.min(50, Math.abs(v) / 2);
-            f.style.left = (v >= 0 ? 50 : 50 - w) + '%'; f.style.width = w + '%'; f.style.background = col(v); tr.append(f);
-          }
-          row.append(el('span', null, g), tr, el('span', 'v', v == null ? '—' : signed(v, 0, '')));
-          gr.append(row);
-        });
-        c.append(gr);
-        const sc = el('div', 'score', 'Score ');
-        sc.append(el('b', null, signed(a.score, 0, '')), ' on a −100 to +100 scale');
-        c.append(sc);
-      }
-      box.append(c);
-    });
-    renderHistory();
-  }
-
-  function renderHistory() {
-    const box = $('#history');
-    box.replaceChildren();
-    const rows = HIST.filter((r) => r.date);
-    if (rows.length < 2) { box.append(el('p', 'empty', 'The history chart fills in after a few daily updates.')); return; }
-    const W = Math.max(300, box.clientWidth), H = 220, m = { l: 34, r: 90, t: 10, b: 24 };
-    const s = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%' });
-    const x = (i) => m.l + i / (rows.length - 1) * (W - m.l - m.r);
-    const y = (v) => m.t + (100 - v) / 200 * (H - m.t - m.b);
-    [-100, -50, 0, 50, 100].forEach((t) => {
-      s.append(svgEl('line', { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }));
-      s.append(svgEl('text', { x: m.l - 6, y: y(t) + 4, 'text-anchor': 'end', class: 'tick' }, t > 0 ? '+' + t : String(t)));
-    });
-    const colors = { gold: 'var(--gold)', silver: '#8a8f98', copper: '#c46a36', miners: '#4f7cac' };
-    const ends = [];
-    ASSETS.forEach(([k, label]) => {
-      const pts = rows.map((r, i) => [x(i), Number(r[k + '_score'])]).filter((p) => !isNaN(p[1]));
-      if (pts.length < 2) return;
-      s.append(svgEl('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + y(p[1]).toFixed(1)).join(' '), fill: 'none', stroke: colors[k], 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-      ends.push({ y: y(pts[pts.length - 1][1]), label: label + ' ' + signed(pts[pts.length - 1][1], 0, ''), c: colors[k] });
-    });
-    ends.sort((a, b) => a.y - b.y);
-    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
-    ends.forEach((e) => s.append(svgEl('text', { x: W - m.r + 6, y: e.y + 4, fill: e.c, style: 'fill:' + e.c }, e.label)));
-    s.append(svgEl('text', { x: m.l, y: H - 6, class: 'tick' }, when(rows[0].date)));
-    s.append(svgEl('text', { x: W - m.r, y: H - 6, class: 'tick', 'text-anchor': 'end' }, when(rows[rows.length - 1].date)));
-    box.append(s);
-  }
-
-  function measure(svg, texts, cls) {
+  // ---------- Charts ----------
+  const measure = (svg, texts, cls) => {
     let max = 0;
-    texts.forEach((t) => { const n = svgEl('text', cls ? { class: cls } : {}, t); svg.append(n); max = Math.max(max, n.getComputedTextLength()); n.remove(); });
+    texts.forEach((t) => {
+      const n = svg.append('text').attr('class', cls || null).text(t);
+      max = Math.max(max, n.node().getComputedTextLength());
+      n.remove();
+    });
     return max;
-  }
-  const fit = (t, px) => { const n = Math.floor(px / 6.6); return t.length > n ? t.slice(0, Math.max(4, n - 1)) + '…' : t; };
-
-  function divergingBars(box, rows, opts = {}) {
-    // rows: [{header}] or [{label, value, title, body}]
-    box.replaceChildren();
-    if (!rows.length) { box.append(el('p', 'empty', opts.empty || 'No data yet.')); return; }
-    const W = Math.max(300, box.clientWidth), rowH = 28, headH = 26, top = opts.axis ? 22 : 6;
-    const H = top + rows.reduce((h, r) => h + (r.header ? headH : rowH), 0) + 4;
-    const s = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%' });
-    box.append(s);
-    const labW = Math.min(W * 0.42, measure(s, rows.filter((r) => !r.header).map((r) => r.label)) + 10);
-    const vals = rows.filter((r) => !r.header).map((r) => r.text || signed(r.value, 0, opts.suffix || ''));
-    const valW = measure(s, vals, 'tick') + 10;
-    const ext = opts.ext || Math.max(1, ...rows.filter((r) => !r.header).map((r) => Math.abs(r.value)));
-    const x = (v) => labW + valW + (v + ext) / (2 * ext) * (W - labW - 2 * valW);
-    if (opts.axis) {
-      [-ext, -ext / 2, 0, ext / 2, ext].forEach((t) => {
-        s.append(svgEl('line', { x1: x(t), x2: x(t), y1: top - 4, y2: H, stroke: t === 0 ? 'var(--muted)' : 'var(--grid)' }));
-        s.append(svgEl('text', { x: x(t), y: 12, 'text-anchor': 'middle', class: 'tick' }, t > 0 ? '+' + t : String(t)));
-      });
-    } else {
-      s.append(svgEl('line', { x1: x(0), x2: x(0), y1: 0, y2: H, stroke: 'var(--muted)' }));
+  };
+  // Truncate text to fit a pixel width, measuring the real rendered length.
+  const fitText = (node, text, px) => {
+    node.text(text);
+    if (node.node().getComputedTextLength() <= px) return;
+    let lo = 1, hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      node.text(text.slice(0, mid) + '…');
+      if (node.node().getComputedTextLength() <= px) lo = mid; else hi = mid - 1;
     }
+    node.text(text.slice(0, lo) + '…');
+    node.append('title').text(text);
+  };
+  const makeTip = (el) => {
+    const tip = document.createElement('div'); tip.className = 'mt-tip'; tip.style.display = 'none';
+    const th = document.createElement('div'); th.className = 'mt-tip-h';
+    const tb = document.createElement('div');
+    tip.append(th, tb);
+    el.appendChild(tip);
+    return {
+      show(head, body, x, y) {
+        th.textContent = head; tb.textContent = body; tip.style.display = 'block';
+        const tw = tip.offsetWidth;
+        tip.style.left = Math.max(0, Math.min(el.clientWidth - tw, x + 12)) + 'px';
+        tip.style.top = y + 'px';
+      },
+      hide() { tip.style.display = 'none'; },
+    };
+  };
+
+  dash.draw('drivers', (el) => {
+    el.replaceChildren();
+    const d = dash.data('signals');
+    if (d.status !== 'ok') { el.textContent = d.status === 'error' ? 'Signals failed to load.' : ''; return; }
+    const asset = dash.params().asset || 'Gold';
+    const f = ASSETS[asset] || 'f_gold';
+    const rows = [];
+    ['Macro', 'Flows', 'Sentiment'].forEach((g) => {
+      const items = d.data.filter((s) => s.grp === g && Number(s[f]))
+        .map((s) => ({ ...s, impact: Math.max(-100, Math.min(100, Math.round(Number(s.score) * Number(s[f])))) }))
+        .sort((a, b) => b.impact - a.impact);
+      if (items.length) { rows.push({ header: g }); items.forEach((i) => rows.push(i)); }
+    });
+    const W = Math.max(280, el.clientWidth);
+    const rowH = 26, headH = 26, top = 22;
+    const H = top + rows.reduce((h, r) => h + (r.header ? headH : rowH), 0) + 4;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Signal impact on ' + asset);
+    const maxLab = Math.min(W * 0.42, measure(svg, rows.filter((r) => !r.header).map((r) => r.indicator)) + 8);
+    const valW = measure(svg, ['-100'], 'mt-tick') + 10;
+    const x = d3.scaleLinear([-100, 100], [maxLab + valW, W - valW]);
+    [-100, -50, 0, 50, 100].forEach((t) => {
+      svg.append('line').attr('x1', x(t)).attr('x2', x(t)).attr('y1', top - 4).attr('y2', H)
+        .attr('stroke', t === 0 ? 'var(--chart-axis)' : 'var(--chart-grid)').attr('stroke-width', 1);
+      svg.append('text').attr('class', 'mt-tick').attr('x', x(t)).attr('y', 12).attr('text-anchor', 'middle').text(t === 0 ? '0' : d3.format('+d')(t));
+    });
+    const tip = makeTip(el);
     let y = top;
     rows.forEach((r) => {
-      if (r.header) { s.append(svgEl('text', { x: 0, y: y + 17, class: 'grp' }, r.header.toUpperCase())); y += headH; return; }
-      const g = svgEl('g');
-      g.append(svgEl('rect', { x: 0, y, width: W, height: rowH, fill: 'transparent' }));
-      g.append(svgEl('text', { x: 0, y: y + rowH / 2 + 4 }, fit(r.label, labW - 8)));
-      const x0 = x(0), x1 = x(r.value);
-      g.append(svgEl('rect', { x: Math.min(x0, x1), y: y + 7, width: Math.max(2, Math.abs(x1 - x0)), height: rowH - 14, rx: 4, fill: col(r.value) }));
-      g.append(svgEl('text', { x: r.value >= 0 ? x1 + 5 : x1 - 5, y: y + rowH / 2 + 4, 'text-anchor': r.value >= 0 ? 'start' : 'end', class: 'tick' }, r.text || signed(r.value, 0, opts.suffix || '')));
-      if (r.body) {
-        g.addEventListener('mousemove', (ev) => showTip(ev, r.title || r.label, r.body));
-        g.addEventListener('mouseleave', hideTip);
+      if (r.header) {
+        svg.append('text').attr('class', 'mt-grp').attr('x', 0).attr('y', y + 17).text(r.header);
+        y += headH; return;
       }
-      s.append(g);
+      const g = svg.append('g');
+      g.append('rect').attr('x', 0).attr('y', y).attr('width', W).attr('height', rowH).attr('fill', 'transparent');
+      fitText(g.append('text').attr('x', 0).attr('y', y + rowH / 2 + 4), r.indicator, maxLab - 8);
+      const x0 = x(0), x1 = x(r.impact);
+      g.append('rect').attr('x', Math.min(x0, x1)).attr('y', y + 6).attr('width', Math.max(2, Math.abs(x1 - x0))).attr('height', rowH - 12)
+        .attr('rx', 3).attr('fill', signedCol(r.impact));
+      g.append('text').attr('class', 'mt-tick').attr('x', r.impact >= 0 ? x1 + 5 : x1 - 5).attr('y', y + rowH / 2 + 4)
+        .attr('text-anchor', r.impact >= 0 ? 'start' : 'end').text(d3.format('+d')(r.impact));
+      const ry = y;
+      g.on('mouseenter mousemove click', (ev) => {
+        const [mx] = d3.pointer(ev, el);
+        tip.show(r.pillar + ' · ' + fmtDate(r.as_of), r.reading, mx, (ry + rowH) * el.clientWidth / W + 4);
+      }).on('mouseleave', () => tip.hide());
       y += rowH;
     });
-  }
+  });
 
-  function renderIndicators() {
-    const key = state.asset;
-    const groups = ['Macro', 'Flows', 'Sentiment'];
-    const rows = [];
-    groups.forEach((g) => {
-      const items = (D?.factors || []).filter((f) => f.group === g && f.applies[key])
-        .map((f) => ({ ...f, impact: Math.max(-100, Math.min(100, Math.round(f.score * f.applies[key]))) }))
-        .sort((a, b) => b.impact - a.impact);
-      if (items.length) {
-        rows.push({ header: g });
-        items.forEach((f) => rows.push({ label: f.name, value: f.impact, title: f.name + ' · ' + when(f.as_of), body: f.reading }));
-      }
-    });
-    divergingBars($('#factor-chart'), rows, { axis: true, ext: 100, empty: 'No indicators yet. Run the daily fetch.' });
-
-    const t = $('#factor-table');
-    t.replaceChildren();
-    const thead = el('thead'); const hr = el('tr');
-    [['Indicator'], ['Group', 'hide-sm'], ['Latest reading'], ['As of', 'hide-sm'], ['Score'], ['What it teaches', 'hide-sm'], ['Source', 'hide-sm']]
-      .forEach(([h, c]) => hr.append(el('th', c || null, h)));
-    thead.append(hr); t.append(thead);
-    const tb = el('tbody');
-    (D?.factors || []).forEach((f) => {
-      const tr = el('tr');
-      tr.append(el('td', null, f.name), el('td', 'hide-sm', f.group), el('td', null, f.reading), el('td', 'hide-sm', when(f.as_of)));
-      const sc = el('td', 'n', signed(f.score, 0, '')); sc.style.color = col(f.score); tr.append(sc);
-      tr.append(el('td', 'hide-sm', f.learning));
-      const src = el('td', 'hide-sm');
-      const u = safeUrl(f.url);
-      if (u) { const a = el('a', null, f.source); a.href = u; a.target = '_blank'; a.rel = 'noopener'; src.append(a); } else src.textContent = f.source;
-      tr.append(src);
-      tb.append(tr);
-    });
-    t.append(tb);
-  }
-
-  function newsItem(n) {
-    const li = el('li');
-    li.append(el('span', 'dot ' + n.tone));
-    const body = el('div');
-    const u = safeUrl(n.url);
-    const a = el('a', null, n.title);
-    if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener'; }
-    body.append(a);
-    const meta = el('div', 'meta');
-    meta.append(el('span', null, n.source), el('span', null, '· ' + when(n.published)));
-    (n.metals || []).forEach((m) => meta.append(el('span', 'tag', m)));
-    (n.topics || []).forEach((m) => meta.append(el('span', 'tag', m)));
-    if (n.cb_action) meta.append(el('span', 'tag', (n.cb_country ? n.cb_country + ' ' : '') + n.cb_action));
-    body.append(meta);
-    li.append(body);
-    return li;
-  }
-
-  function renderNews() {
-    const list = (D?.news || []).filter((n) =>
-      (state.metal === 'all' || n.metals.includes(state.metal)) &&
-      (state.topic === 'all' || n.topics.includes(state.topic)) &&
-      (!state.q || n.title.toLowerCase().includes(state.q)));
-    $('#news-count').textContent = list.length + ' headlines from the last two weeks. Green dot: bullish wording, red: bearish, grey: neutral.';
-    const ul = $('#news-list');
-    ul.replaceChildren(...list.slice(0, 120).map(newsItem));
-    if (!list.length) ul.append(el('li', 'empty', 'No headlines match.'));
-  }
-
-  function renderBuyers() {
-    const cb = CB || {};
-    const tiles = $('#cb-tiles');
-    tiles.replaceChildren();
-    const addTile = (n, l) => { const t = el('div', 'tile'); t.append(el('div', 'n', n), el('div', 'l', l)); tiles.append(t); };
-    if (cb.latest_month_net_tonnes != null) addTile(signed(cb.latest_month_net_tonnes, 0, ' t'), 'Global net central bank buying, ' + (cb.latest_month || ''));
-    const buys = (D?.news || []).filter((n) => n.cb_action === 'buying');
-    const sells = (D?.news || []).filter((n) => n.cb_action === 'selling');
-    addTile(String(buys.length), 'Buying headlines, 2 weeks');
-    addTile(String(sells.length), 'Selling headlines, 2 weeks');
-    $('#cb-highlights').replaceChildren(...(cb.highlights || []).map((h) => el('li', null, h)));
-    $('#cb-source').textContent = cb.source ? 'Monthly figures: ' + cb.source + (cb.as_of ? ', ' + when(cb.as_of) : '') + '. Updated by hand in data/central_banks.json.' : '';
-    $('#cb-country-title').textContent = 'Net change by country' + (cb.by_country_period ? ', ' + cb.by_country_period : '');
-    const rows = [...(cb.by_country || [])].sort((a, b) => b.tonnes - a.tonnes).map((r) => ({ label: r.country, value: r.tonnes, text: signed(r.tonnes, 0, ' t') }));
-    divergingBars($('#cb-chart'), rows, { empty: 'Add countries to data/central_banks.json.' });
-    const fill = (ul, arr) => { ul.replaceChildren(...arr.slice(0, 12).map(newsItem)); if (!arr.length) ul.append(el('li', 'empty', 'None in the last two weeks.')); };
-    fill($('#cb-buy-news'), buys);
-    fill($('#cb-sell-news'), sells);
-    renderBanks();
-  }
-
-  function renderBanks() {
-    const box = $('#bank-chart');
-    box.replaceChildren();
-    const spot = D?.prices?.gold?.price;
-    const rows = [...(CB?.bank_targets || [])].sort((a, b) => b.target - a.target);
-    if (!spot || !rows.length) { box.append(el('p', 'empty', 'Add bank targets to data/central_banks.json.')); return; }
-    const W = Math.max(300, box.clientWidth), rowH = 42, top = 26, H = top + rows.length * rowH + 6;
-    const s = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%' });
-    box.append(s);
-    const labW = Math.min(W * 0.42, Math.max(measure(s, rows.map((r) => r.bank)), measure(s, rows.map((r) => r.horizon + ' · ' + r.scenario), 'tick')) + 14);
-    const endLab = (r) => money(r.target) + ' · ' + signed((r.target / spot - 1) * 100, 0);
-    const endW = measure(s, rows.map(endLab), 'tick') + 12;
-    const lo = Math.min(spot, ...rows.map((r) => r.target)) * 0.97, hi = Math.max(spot, ...rows.map((r) => r.target));
-    const x = (v) => labW + (v - lo) / (hi - lo || 1) * (W - labW - endW);
-    s.append(svgEl('line', { x1: x(spot), x2: x(spot), y1: top - 6, y2: H, stroke: 'var(--muted)', 'stroke-dasharray': '4 3' }));
-    s.append(svgEl('text', { x: x(spot), y: 12, 'text-anchor': 'middle', class: 'tick' }, 'Today ' + money(spot)));
+  dash.draw('cb', (el) => {
+    el.replaceChildren();
+    const d = dash.data('cb_flows');
+    if (d.status !== 'ok') return;
+    const rows = [...d.data].sort((a, b) => Number(b.tonnes) - Number(a.tonnes));
+    const W = Math.max(260, el.clientWidth), rowH = 28, top = 6;
+    const H = top + rows.length * rowH + 4;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Central bank net gold change by country');
+    const labW = measure(svg, rows.map((r) => r.country)) + 10;
+    const valW = measure(svg, rows.map((r) => d3.format('+d')(Number(r.tonnes)) + ' t'), 'mt-tick') + 8;
+    const ext = d3.max(rows, (r) => Math.abs(Number(r.tonnes))) || 1;
+    const x = d3.scaleLinear([-ext, ext], [labW + valW, W - valW]);
+    svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 0).attr('y2', H).attr('stroke', 'var(--chart-axis)');
     rows.forEach((r, i) => {
-      const y = top + i * rowH + 12, c = r.target >= spot ? 'var(--up)' : 'var(--down)';
-      s.append(svgEl('text', { x: 0, y: y + 4 }, r.bank));
-      s.append(svgEl('text', { x: 0, y: y + 19, class: 'tick' }, fit(r.horizon + ' · ' + r.scenario, labW - 6)));
-      s.append(svgEl('line', { x1: x(spot), x2: x(r.target), y1: y, y2: y, stroke: c, 'stroke-width': 2, 'stroke-linecap': 'round' }));
-      s.append(svgEl('circle', { cx: x(r.target), cy: y, r: 5, fill: c }));
-      s.append(svgEl('text', { x: x(r.target) + 9, y: y + 4, class: 'tick' }, endLab(r)));
+      const t = Number(r.tonnes), y = top + i * rowH, x0 = x(0), x1 = x(t);
+      svg.append('text').attr('x', 0).attr('y', y + rowH / 2 + 4).text(r.country);
+      svg.append('rect').attr('x', Math.min(x0, x1)).attr('y', y + 6).attr('width', Math.max(2, Math.abs(x1 - x0))).attr('height', rowH - 12)
+        .attr('rx', 3).attr('fill', signedCol(t));
+      svg.append('text').attr('class', 'mt-tick').attr('x', t >= 0 ? x1 + 5 : x1 - 5).attr('y', y + rowH / 2 + 4)
+        .attr('text-anchor', t >= 0 ? 'start' : 'end').text(d3.format('+d')(t) + ' t');
     });
-  }
+  });
 
-  function renderLearnings() {
-    const notes = $('#notes');
-    notes.replaceChildren(...(LEARN?.notes || []).map((n) => {
-      const li = el('li');
-      li.append(el('div', null, n.text));
-      li.append(el('div', 'meta', (n.author || '') + ' · ' + when(n.date)));
-      return li;
-    }));
-    if (!(LEARN?.notes || []).length) notes.append(el('li', 'empty', 'Add notes in data/learnings.json.'));
-    $('#lessons').replaceChildren(...(LEARN?.lessons || []).map((l) => {
-      const c = el('article', 'card lesson');
-      c.append(el('h3', null, l.title), el('p', null, l.text));
-      return c;
-    }));
-  }
+  dash.draw('banks', (el) => {
+    el.replaceChildren();
+    const b = dash.data('bank_targets'), p = rowOf('prices', 'asset', 'Gold');
+    if (b.status !== 'ok' || !p) return;
+    const spot = Number(p.price);
+    const rows = [...b.data].sort((a, c) => Number(c.target) - Number(a.target));
+    const W = Math.max(280, el.clientWidth), rowH = 40, top = 26;
+    const H = top + rows.length * rowH + 6;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Bank gold targets compared with spot');
+    const labW = Math.min(W * 0.4, measure(svg, rows.map((r) => r.bank)) + 12);
+    const endLab = (r) => money(Number(r.target)) + ' · ' + d3.format('+.0%')(Number(r.target) / spot - 1);
+    const endW = measure(svg, rows.map(endLab), 'mt-tick') + 10;
+    const lo = Math.min(spot, d3.min(rows, (r) => Number(r.target))) * 0.97;
+    const hi = Math.max(spot, d3.max(rows, (r) => Number(r.target)));
+    const x = d3.scaleLinear([lo, hi], [labW, W - endW]);
+    svg.append('line').attr('x1', x(spot)).attr('x2', x(spot)).attr('y1', top - 6).attr('y2', H)
+      .attr('stroke', 'var(--chart-reference)').attr('stroke-dasharray', '4 3');
+    const todayLab = 'Today ' + money(spot);
+    const tlw = measure(svg, [todayLab], 'mt-tick');
+    svg.append('text').attr('class', 'mt-tick').attr('x', Math.max(tlw / 2, Math.min(W - tlw / 2, x(spot)))).attr('y', 12).attr('text-anchor', 'middle').text(todayLab);
+    rows.forEach((r, i) => {
+      const y = top + i * rowH + 12, t = Number(r.target);
+      fitText(svg.append('text').attr('x', 0).attr('y', y + 4), r.bank, labW - 8);
+      fitText(svg.append('text').attr('class', 'mt-tick').attr('x', 0).attr('y', y + 18), r.horizon + ' · ' + r.scenario, labW - 8);
+      const c = t >= spot ? 'var(--color-ok)' : 'var(--color-bad)';
+      svg.append('line').attr('x1', x(spot)).attr('x2', x(t)).attr('y1', y).attr('y2', y).attr('stroke', c).attr('stroke-width', 2).attr('stroke-linecap', 'round');
+      svg.append('circle').attr('cx', x(t)).attr('cy', y).attr('r', 5).attr('fill', c);
+      svg.append('text').attr('class', 'mt-tick').attr('x', x(t) + 9).attr('y', y + 4).text(endLab(r));
+    });
+  });
+
+  dash.draw('sig-rows', (el) => {
+    el.replaceChildren();
+    const d = dash.data('signals');
+    if (d.status !== 'ok') return;
+    d.data.forEach((s) => {
+      const tr = document.createElement('tr');
+      const cell = (txt, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = txt; tr.appendChild(td); return td; };
+      cell(s.pillar);
+      const ind = cell(s.indicator);
+      const tag = document.createElement('span'); tag.className = 'mt-tag'; tag.textContent = s.mode === 'auto' ? 'auto' : 'manual';
+      ind.appendChild(tag);
+      cell(s.reading, 'mt-hide-narrow');
+      cell(fmtDate(s.as_of));
+      const sc = cell(d3.format('+d')(Number(s.score)), 'mt-num');
+      sc.style.color = signedCol(Number(s.score));
+      const src = document.createElement('td'); src.className = 'mt-hide-narrow';
+      if (typeof s.url === 'string' && s.url.startsWith('https://')) {
+        const a = document.createElement('a'); a.href = s.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = s.source;
+        src.appendChild(a);
+      } else { src.textContent = s.source; }
+      tr.appendChild(src);
+      el.appendChild(tr);
+    });
+  });
 })();

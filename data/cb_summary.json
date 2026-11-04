@@ -1,0 +1,26 @@
+[
+ {
+  "metric": "Global net buying, September",
+  "value": 63,
+  "unit": "t",
+  "as_of": "2026-10-15"
+ },
+ {
+  "metric": "China, September",
+  "value": 21,
+  "unit": "t",
+  "as_of": "2026-10-07"
+ },
+ {
+  "metric": "China buying streak",
+  "value": 23,
+  "unit": "months",
+  "as_of": "2026-10-07"
+ },
+ {
+  "metric": "China total reserves",
+  "value": 2196,
+  "unit": "t",
+  "as_of": "2026-10-07"
+ }
+]
