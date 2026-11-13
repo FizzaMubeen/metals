@@ -1,42 +1,42 @@
 [
  {
   "asset": "Gold",
-  "price": 3889,
+  "price": 3900,
   "unit": "$/oz",
-  "change_1m_pct": -6.9,
+  "change_1m_pct": -5.1,
   "record": 5590.0,
-  "as_of": "2026-11-12",
+  "as_of": "2026-11-13",
   "source": "Yahoo Finance (futures)",
-  "fetched_at": "2026-11-12T14:20:09Z"
+  "fetched_at": "2026-11-13T13:40:27Z"
  },
  {
   "asset": "Silver",
-  "price": 50.15,
+  "price": 50.06,
   "unit": "$/oz",
-  "change_1m_pct": -15.2,
+  "change_1m_pct": -9.9,
   "record": 115.08,
-  "as_of": "2026-11-12",
+  "as_of": "2026-11-13",
   "source": "Yahoo Finance (futures)",
-  "fetched_at": "2026-11-12T14:20:09Z"
+  "fetched_at": "2026-11-13T13:40:27Z"
  },
  {
   "asset": "Copper",
-  "price": 6.19,
+  "price": 6.16,
   "unit": "$/lb",
-  "change_1m_pct": -7.4,
+  "change_1m_pct": -6.8,
   "record": 6.85,
-  "as_of": "2026-11-12",
+  "as_of": "2026-11-13",
   "source": "Yahoo Finance (futures)",
-  "fetched_at": "2026-11-12T14:20:09Z"
+  "fetched_at": "2026-11-13T13:40:27Z"
  },
  {
   "asset": "Gold miners",
-  "price": 85.21,
+  "price": 81.84,
   "unit": "GDX $",
-  "change_1m_pct": -3.8,
+  "change_1m_pct": -6.2,
   "record": 115.84,
-  "as_of": "2026-11-11",
+  "as_of": "2026-11-12",
   "source": "Yahoo Finance",
-  "fetched_at": "2026-11-12T14:20:09Z"
+  "fetched_at": "2026-11-13T13:40:27Z"
  }
 ]
